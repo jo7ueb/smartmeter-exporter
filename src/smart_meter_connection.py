@@ -186,14 +186,18 @@ class SmartMeterConnection:
         self.__logger.debug(f'  ECHONet str: {request_bytes}')
         self.__send_udp_serial(self.__link_local_addr, request_bytes)
         self.__logger.debug('ECHONet sent.')
-        
-        if not self.__read_line_serial().startswith('EVENT 21'):
-            return None
-        if self.__read_line_serial() != 'OK':
-            return None
-        event = self.__read_line_serial()
 
-        if event.startswith('ERXUDP'):
+        response = self.__read_line_serial()
+        self.__logger.debug(f'ECHONet response: {response}')
+
+        if response == '':
+            return None
+        if not response.startswith('EVENT 21'):
+            return None
+        if response != 'OK':
+            return None
+
+        if response.startswith('ERXUDP'):
             parts = self.__parse_erxudp(event)
             data = echonet.parse_elite_response_data(parts['data'])
             if (    data['seoj'] == echonet.smartmeter_eoj
