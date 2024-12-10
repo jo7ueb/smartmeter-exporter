@@ -22,6 +22,7 @@ if __name__ == '__main__':
     
     with SmartMeterConnection(sm_id, sm_key, sm_dev) as conn:
         conn.initialize_params()
+        logger.info("================ CONNECTION ESTABLISHED ================")
         while True:
             watt_raw_data = conn.get_data('watt')
             if not watt_raw_data is None:

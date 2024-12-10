@@ -49,18 +49,20 @@ class SmartMeterConnection:
         self.__connection.write((line + '\r\n').encode('utf-8'))
         self.__serial_logger.debug('Echo back: ' + str(self.__connection.readline()))
 
-    def __send_udp_serial(self, addr: str, data: bytes) -> None:
+    def __send_udp_serial(self, addr: str, data: bytes, echo_flag=False) -> None:
         
         head = f'SKSENDTO 1 {addr} 0E1A 1 0 {len(data):04X} '
         data = head.encode('ascii') + data
         self.__serial_logger.debug(b'Send: ' + data)
         self.__connection.write(data)
-        echo_back = self.__connection.readline()
-        while echo_back != head.encode('ascii') + b'\r\n':
-            if echo_back != b'':
-                self.__serial_logger.debug('Received Different: ' + str(echo_back))
+
+        if echo_flag:
             echo_back = self.__connection.readline()
-        self.__serial_logger.debug('Echo back: ' + str(echo_back))
+            while echo_back != head.encode('ascii') + b'\r\n':
+                if echo_back != b'':
+                    self.__serial_logger.debug('Received Different: ' + str(echo_back))
+                echo_back = self.__connection.readline()
+                self.__serial_logger.debug('Echo back: ' + str(echo_back))
 
     def __read_line_serial(self) -> str:
         blob = b''
@@ -71,7 +73,7 @@ class SmartMeterConnection:
             if blank_counter > 100:
                 self.__logger.debug(f'Blank line limit exceeded. retry...')
                 return ""
-            text = blob.decode(encoding='utf-8')[:-2]
+            text = blob.decode(encoding='ascii', errors='backslashreplace')[:-2]
             self.__serial_logger.debug(f'Receive: {text}')
         return text
 
@@ -104,6 +106,7 @@ class SmartMeterConnection:
                     channel = scan_res['Channel']
                     pan_id = scan_res['Pan ID']
                     addr = scan_res['Addr']
+                    self.__logger.debug(f'Scan comleted with channel({channel}) pan_id({pan_id})  addr({addr})')
                     return channel, pan_id, addr
                 elif line.startswith('  '):
                     cols = line.strip().split(':')
@@ -166,6 +169,7 @@ class SmartMeterConnection:
         return erxudp_response
 
     def get_data(self, epc_type: str) -> Optional[int]:
+        self.__logger.info(f'Getting data for {epc_type}')
         if not self.__connection:
             raise Exception('Connection is not initialized')
         if not self.__link_local_addr:
@@ -179,8 +183,10 @@ class SmartMeterConnection:
             return None
 
         request_bytes = echonet.make_elite_request_str(epc_type)
+        self.__logger.debug(f'  ECHONet str: {request_bytes}')
         self.__send_udp_serial(self.__link_local_addr, request_bytes)
-
+        self.__logger.debug('ECHONet sent.')
+        
         if not self.__read_line_serial().startswith('EVENT 21'):
             return None
         if self.__read_line_serial() != 'OK':
@@ -193,5 +199,6 @@ class SmartMeterConnection:
             if (    data['seoj'] == echonet.smartmeter_eoj
                 and data['esv'] == echonet.esv_res_codes['Get_Res']
                 and data['epc'] == epc):
+                self.__logger.info('Data returned!!')
                 return data['edt']
         return None
