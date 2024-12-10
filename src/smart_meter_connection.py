@@ -93,7 +93,7 @@ class SmartMeterConnection:
     def __scan(self) -> Tuple[str, str, str]:
         for duration in range(4, 10):
             self.__logger.debug(f'Start scanning with duration {duration}')
-            self.__write_line_serial(f'SKSCAN 2 FFFFFFFF {duration} 0')
+            self.__write_line_serial(f'SKSCAN 2 FFFFFFFF {duration}')
             scan_res = {}
             while True:
                 line = self.__read_line_serial()
