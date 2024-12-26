@@ -12,6 +12,7 @@ class SmartMeterConnection:
         self.__logger = logging.getLogger(__name__)
         self.__connection: Optional[Serial] = None
         self.__link_local_addr: Optional[str] = None
+        self.request_bytes = None
 
     def connect(self):
         self.__connection = Serial(self.__dev, 115200)
@@ -70,9 +71,12 @@ class SmartMeterConnection:
         while blob == b'':
             blank_counter += 1
             blob = self.__connection.readline()
-            if blank_counter > 100:
+            if blank_counter > 3:
                 self.__logger.debug(f'Blank line limit exceeded. retry...')
-                return ""
+                self.__send_udp_serial(self.__link_local_addr, self.request_bytes)
+                self.__logger.debug('ECHONet sent.')
+                blob = self.__connection.readline()
+
             text = blob.decode(encoding='ascii', errors='backslashreplace')[:-2]
             self.__serial_logger.debug(f'Receive: {text}')
         return text
@@ -182,9 +186,9 @@ class SmartMeterConnection:
         else:
             return None
 
-        request_bytes = echonet.make_elite_request_str(epc_type)
-        self.__logger.debug(f'  ECHONet str: {request_bytes}')
-        self.__send_udp_serial(self.__link_local_addr, request_bytes)
+        self.request_bytes = echonet.make_elite_request_str(epc_type)
+        self.__logger.debug(f'  ECHONet str: {self.request_bytes}')
+        self.__send_udp_serial(self.__link_local_addr, self.request_bytes)
         self.__logger.debug('ECHONet sent.')
 
         response = self.__read_line_serial()
