@@ -52,7 +52,7 @@ class SmartMeterConnection:
 
     def __send_udp_serial(self, addr: str, data: bytes, echo_flag=False) -> None:
         
-        head = f'SKSENDTO 1 {addr} 0E1A 1 0 {len(data):04X} '
+        head = f'SKSENDTO 1 {addr} 0E1A 1 {len(data):04X} '
         data = head.encode('ascii') + data
         self.__serial_logger.debug(b'Send: ' + data)
         self.__connection.write(data)
@@ -71,10 +71,11 @@ class SmartMeterConnection:
         while blob == b'':
             blank_counter += 1
             blob = self.__connection.readline()
-            if blank_counter > 3:
+            if blank_counter > 5:
                 self.__logger.debug(f'Blank line limit exceeded. retry...')
                 self.__send_udp_serial(self.__link_local_addr, self.request_bytes)
-                self.__logger.debug('ECHONet sent.')
+                self.__logger.debug('ECHONet resent.')
+                blank_counter = 0
                 blob = self.__connection.readline()
 
             text = blob.decode(encoding='ascii', errors='backslashreplace')[:-2]
