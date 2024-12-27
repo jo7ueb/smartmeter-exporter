@@ -1,7 +1,9 @@
 import logging, os, time, prometheus_client
 from prometheus_client import Gauge
 from smart_meter_connection import SmartMeterConnection
-
+from smart_meter_thread import SmartMeterThread
+from serial import Serial
+from serial.threaded import ReaderThread
 if __name__ == '__main__':
 
     sm_id = os.environ.get('SMARTMETER_ID', None)
@@ -20,9 +22,19 @@ if __name__ == '__main__':
     watt_gauge = Gauge('power_consumption_watt', 'Power consumption in Watt')
     ampare_gauge_r = Gauge('power_consumption_ampare_r', 'Power consumption in Ampare(R)')
     ampare_gauge_t = Gauge('power_consumption_ampare_t', 'Power consumption in Ampare(T)')
-    
+
+    serial = Serial(sm_dev, 115200, timeout=1)
+    with ReaderThread(serial, SmartMeterThread) as protocol:
+        protocol.establish_echonet(sm_id, sm_key)
+        
+        while True:
+            logger.info('Sending request to smartmeter.')
+            protocol.write_line('SKINFO')
+            time.sleep(sm_interval)
+                
     with SmartMeterConnection(sm_id, sm_key, sm_dev) as conn:
         conn.initialize_params()
+         
         logger.info("================ CONNECTION ESTABLISHED ================")
         while True:
             kWh_raw_data = conn.get_data('kWh')
