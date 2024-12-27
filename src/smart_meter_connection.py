@@ -195,7 +195,11 @@ class SmartMeterConnection:
             raise Exception('Connection is not initialized')
         if not self.__link_local_addr:
             raise Exception('Destination address is not set')
-        
+
+        if epc_type == 'kWh':
+            epc = echonet.epc_kWh
+        elif epc_type == 'kWh_uint':
+            epc = echonet.epc_kWh_unit
         if epc_type == 'watt':
             epc = echonet.epc_watt
         elif epc_type == 'ampare':

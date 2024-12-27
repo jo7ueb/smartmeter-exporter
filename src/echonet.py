@@ -2,6 +2,8 @@
 
 smartmeter_eoj = b'\x02\x88\x01' #住宅設備関連機器(低圧スマート電力量メータクラス)
 wisun_module_eoj = b'\x05\xFF\x01' #管理操作関連機器/コントローラ
+epc_kWh = b'\xE0'  #EPC 積算電力量
+epc_kWh_unit = b'\xE1'  #EPC積算電力量単位
 epc_watt = b'\xE7' #EPC 瞬時電力計測値
 epc_ampare = b'\xE8' #EPC 瞬時電流計測値
 
@@ -30,6 +32,10 @@ def parse_elite_response_data(data: str):
 
 def make_elite_request_str(epc_type: str):
 
+    if epc_type == 'kWh':
+        epc = epc_kWh
+    elif epc_type == 'kWh_unit':
+        epc = epc_kWh
     if epc_type == 'watt':
         epc = epc_watt
     elif epc_type == 'ampare':

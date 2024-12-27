@@ -16,6 +16,7 @@ if __name__ == '__main__':
 
     prometheus_client.start_http_server(sm_port)
 
+    kWh_gauge = Gauge('accumulated_power_consumption_kWh', 'Accumulated power consumption in kWh')
     watt_gauge = Gauge('power_consumption_watt', 'Power consumption in Watt')
     ampare_gauge_r = Gauge('power_consumption_ampare_r', 'Power consumption in Ampare(R)')
     ampare_gauge_t = Gauge('power_consumption_ampare_t', 'Power consumption in Ampare(T)')
@@ -24,11 +25,21 @@ if __name__ == '__main__':
         conn.initialize_params()
         logger.info("================ CONNECTION ESTABLISHED ================")
         while True:
+            kWh_raw_data = conn.get_data('kWh')
+            kWh_unit_raw_data = conn.get_data('kWh_unit')
+            if kWh_raw_data and kWh_unit_raw_data:
+                kWh_data = int(kWh_raw_data, 16)
+                kWh_unit_data = int(kWh_unit_raw_data, 16)
+                #         0    1     2      3      4      5     6     7     8     9     A     B       C       D
+                coeff = (1.0, 0.1, 0.01, 0.001, 0.0001, None, None, None, None, None, 10.0, 100.0, 1000.0, 10000.0)
+                kWh_data *= coeff[kWh_unit_data]
+                kWh_gauge.set(kWh_data)
+                logger.info(f'[Gauge set] Current kWh: {kWh_data} kWh')
             watt_raw_data = conn.get_data('watt')
             if not watt_raw_data is None:
                 watt_data = int(watt_raw_data,16)
                 watt_gauge.set(watt_data)
-                logger.info(f'Current power consumption(Watt): {watt_data} W')
+                logger.info(f'[Gauge set] Current power consumption(Watt): {watt_data} W')
 
             ampare_data = conn.get_data('ampare')
             if not ampare_data is None:
@@ -36,8 +47,8 @@ if __name__ == '__main__':
                 ampare_data_t = int(ampare_data[4:8], 16) * 100
                 if not ampare_data_r  is None:
                     ampare_gauge_r.set(ampare_data_r)
-                    logger.info(f'Current power consumption(Ampare/R): {ampare_data_r} mA')
+                    logger.info(f'[Gauge set] Current power consumption(Ampare/R): {ampare_data_r} mA')
                 if not ampare_data_t  is None:
                     ampare_gauge_t.set(ampare_data_t)
-                    logger.info(f'Current power consumption(Ampare/T): {ampare_data_t} mA')
+                    logger.info(f'[Gauge set] Current power consumption(Ampare/T): {ampare_data_t} mA')
             time.sleep(sm_interval)
