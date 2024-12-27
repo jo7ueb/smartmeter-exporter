@@ -146,7 +146,20 @@ class SmartMeterConnection:
             return {}
 
         parts = event.split(' ')
-        if len(parts) == 10:
+
+        self.__logger.debug(f'len(parts): {len(parts)}  parts: {parts})]')
+        if len(parts) == 9:
+            erxudp_response = {
+                'sender': parts[1],
+                'dest': parts[2],
+                'rport': parts[3],
+                'lport': parts[4],
+                'sender_lla': parts[5],
+                'secured': parts[6],
+                'datalen': int(parts[7],16),
+                'data': parts[8]
+                }
+        elif len(parts) == 10:
             erxudp_response = {
                 'sender': parts[1],
                 'dest': parts[2],
@@ -203,7 +216,9 @@ class SmartMeterConnection:
             return None
 
         if response.startswith('ERXUDP'):
-            parts = self.__parse_erxudp(event)
+            self.___logger.debug('UDP Packet arrived from smart meter')
+            parts = self.__parse_erxudp(response)
+            self.__logger.debug(f'Parsed UDP packet: {parts}')
             data = echonet.parse_elite_response_data(parts['data'])
             if (    data['seoj'] == echonet.smartmeter_eoj
                 and data['esv'] == echonet.esv_res_codes['Get_Res']
