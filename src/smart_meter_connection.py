@@ -45,7 +45,7 @@ class SmartMeterConnection:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
-    def write_line(self, line: str, echo_back=False) -> None:
+    def write_line(self, line: str, echo_back=True) -> None:
         self.__connection.write((line + '\r\n').encode('utf-8'))
         self.__serial_logger.debug(f'[SERIAL] ===> {line}')
         if echo_back:
@@ -54,7 +54,8 @@ class SmartMeterConnection:
     def read_line(self):
         line = self.__connection.readline()
         self.__serial_logger.debug(f'[SERIAL] <=== {line}')
-        return line
+        text = line.decode(encoding='ascii', errors='backslashreplace')[:-2]
+        return text
 
     def __send_udp_serial(self, addr: str, data: bytes, echo_flag=False) -> None:
         
@@ -64,7 +65,7 @@ class SmartMeterConnection:
         self.__connection.write(data)
         response = self.read_line()
         if not response != 'OK':
-            self.__loger.warn('UDP send failed.')
+            self.__logger.warn('UDP send failed.')
             
         if echo_flag:
             echo_back = self.read_line()
@@ -92,7 +93,7 @@ class SmartMeterConnection:
         return text
 
     def __check_version(self) -> str:
-        self.write_line('SKVER', echo_back=True)
+        self.write_line('SKVER')
         ever = self.read_line()
         self.read_line()
         ret = ever.split(' ', 2)
