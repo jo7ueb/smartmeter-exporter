@@ -27,6 +27,8 @@ if __name__ == '__main__':
         while True:
             kWh_raw_data = conn.get_data('kWh')
             kWh_unit_raw_data = conn.get_data('kWh_unit')
+            logger.debug(f'kWh_raw: {kWh_raw_data}')
+            logger.debug(f'kWh_unit_raw: {kWh_unit_raw_data}')
             if kWh_raw_data and kWh_unit_raw_data:
                 kWh_data = int(kWh_raw_data, 16)
                 kWh_unit_data = int(kWh_unit_raw_data, 16)
