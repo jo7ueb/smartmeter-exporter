@@ -9,7 +9,7 @@ class SmartMeterThread(LineReader):
     def __init__(self):
         super().__init__()
         self.__logger = logging.getLogger(__name__)
-        self.__received_lines = []
+        self.__received_lines = []  # 同期通信用のバッファ
         self.__is_echonet_established = False
 
     def connection_made(self, transport):
@@ -18,10 +18,11 @@ class SmartMeterThread(LineReader):
          
     def handle_line(self, data):
         self.__logger.debug(f'[SERIAL] <=== {data}')
-        self.__received_lines.append(data)
-
+        
         if self.__is_echonet_established:
             pass
+        else:
+            self.__received_lines.append(data)
 
     def connection_lost(self, exc):
         if exc:
@@ -86,6 +87,10 @@ class SmartMeterThread(LineReader):
                 self.__logger.debug(f'    RSSI(dBm): {rssi}')
                 self.__logger.debug(f'    pair_id: {pair_id}')
 
+                # 余計な電文が来ることがあるのでしばし待つ
+                time.sleep(5)
+                self.__received_lines.clear()
+                
                 return channel, pan_id, addr
             else:
                 raise Exception(f'Unexpected reply: {self.__received_lines}')
@@ -97,9 +102,28 @@ class SmartMeterThread(LineReader):
         assert self.__received_lines.pop(0) == 'OK'
 
     def __get_ip_from_mac(self, macaddr):
-        pass
+        self.__write(f'SKLL64 {macaddr}')
+        ipv6_addr = self.__received_lines.pop(0)
+        self.__logger.info(f'IPv6 link local address: {ipv6_addr}')
+        return ipv6_addr
+    
     def __connect(self, addr):
-        pass
+        self.__write(f'SKJOIN {addr}')
+        assert self.__received_lines.pop(0) == 'OK'
+
+        while len(self.__received_lines) == 0:
+            pass
+
+        line = self.__received_lines.pop(0)
+        if line.startswith('EVENT 24'):
+            raise RuntimeError('Connection failed.')
+        elif line.startswith('EVENT 25'):
+            self.__logger.info('Connection successful.')
+            self.__is_echonet_established = True
+            return
+        else:
+            self.__logger.debug(f'Ignoring response: {line}')
+ 
     def establish_echonet(self, sm_id, sm_password):
         self.__logger.info('Establish connection to smartmeter Echonet ...')
 
