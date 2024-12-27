@@ -11,7 +11,7 @@ if __name__ == '__main__':
     sm_interval = int(os.environ.get('SMARTMETER_GET_INTERVAL', 10))
     sm_port = int(os.environ.get('PORT', 8000))
 
-    logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=sm_log_level)
+    logging.basicConfig(format='%(asctime)s %(levelname)s %(filename)s:%(lineno)d : %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=sm_log_level)
     logger = logging.getLogger('connection')
 
     prometheus_client.start_http_server(sm_port)

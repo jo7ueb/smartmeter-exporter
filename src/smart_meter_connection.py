@@ -56,7 +56,10 @@ class SmartMeterConnection:
         data = head.encode('ascii') + data
         self.__serial_logger.debug(b'Send: ' + data)
         self.__connection.write(data)
-
+        response = self.__connection.readline()
+        if not response != 'OK':
+            self.__loger.warn('UDP send failed.')
+            
         if echo_flag:
             echo_back = self.__connection.readline()
             while echo_back != head.encode('ascii') + b'\r\n':
@@ -209,14 +212,16 @@ class SmartMeterConnection:
         self.__logger.debug(f'ECHONet response: {response}')
 
         if response == '':
+            self.__logger.debug('    Blank')
             return None
-        if not response.startswith('EVENT 21'):
-            return None
-        if response != 'OK':
+        if response.startswith('EVENT 21'):
+            self.__logger.debug('    EVENT 21: UDP Packet has arrived')
             return None
 
+        self.__logger.debug(f'Response to analyze: {response}')
+
         if response.startswith('ERXUDP'):
-            self.___logger.debug('UDP Packet arrived from smart meter')
+            self.__logger.debug('UDP Packet arrived from smart meter')
             parts = self.__parse_erxudp(response)
             self.__logger.debug(f'Parsed UDP packet: {parts}')
             data = echonet.parse_elite_response_data(parts['data'])
@@ -225,4 +230,6 @@ class SmartMeterConnection:
                 and data['epc'] == epc):
                 self.__logger.info('Data returned!!')
                 return data['edt']
-        return None
+        else:
+            self.__logger.debug('Not ERXUDP UDP recv packet')
+            return None
