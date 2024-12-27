@@ -45,10 +45,16 @@ class SmartMeterConnection:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
-    def __write_line_serial(self, line: str) -> None:
-        self.__serial_logger.debug(f'Send: {line}')
+    def write_line(self, line: str, echo_back=False) -> None:
         self.__connection.write((line + '\r\n').encode('utf-8'))
-        self.__serial_logger.debug('Echo back: ' + str(self.__connection.readline()))
+        self.__serial_logger.debug(f'[SERIAL] ===> {line}')
+        if echo_back:
+            self.__serial_logger.debug('Echo back: ' + str(self.read_line()))
+
+    def read_line(self):
+        line = self.__connection.readline()
+        self.__serial_logger.debug(f'[SERIAL] <=== {line}')
+        return line
 
     def __send_udp_serial(self, addr: str, data: bytes, echo_flag=False) -> None:
         
@@ -56,16 +62,16 @@ class SmartMeterConnection:
         data = head.encode('ascii') + data
         self.__serial_logger.debug(b'Send: ' + data)
         self.__connection.write(data)
-        response = self.__connection.readline()
+        response = self.read_line()
         if not response != 'OK':
             self.__loger.warn('UDP send failed.')
             
         if echo_flag:
-            echo_back = self.__connection.readline()
+            echo_back = self.read_line()
             while echo_back != head.encode('ascii') + b'\r\n':
                 if echo_back != b'':
                     self.__serial_logger.debug('Received Different: ' + str(echo_back))
-                echo_back = self.__connection.readline()
+                echo_back = self.read_line()
                 self.__serial_logger.debug('Echo back: ' + str(echo_back))
 
     def __read_line_serial(self) -> str:
@@ -73,40 +79,40 @@ class SmartMeterConnection:
         blank_counter = 0
         while blob == b'':
             blank_counter += 1
-            blob = self.__connection.readline()
+            blob = self.read_line()
             if blank_counter > 5:
                 self.__logger.debug(f'Blank line limit exceeded. retry...')
                 self.__send_udp_serial(self.__link_local_addr, self.request_bytes)
                 self.__logger.debug('ECHONet resent.')
                 blank_counter = 0
-                blob = self.__connection.readline()
+                blob = self.read_line()
 
             text = blob.decode(encoding='ascii', errors='backslashreplace')[:-2]
             self.__serial_logger.debug(f'Receive: {text}')
         return text
 
     def __check_version(self) -> str:
-        self.__write_line_serial('SKVER')
-        ever = self.__read_line_serial()
-        self.__read_line_serial()
+        self.write_line('SKVER', echo_back=True)
+        ever = self.read_line()
+        self.read_line()
         ret = ever.split(' ', 2)
         return ret[1]
 
     def __set_password(self, key: str):
-        self.__write_line_serial(f'SKSETPWD C {key}')
-        assert self.__read_line_serial() == 'OK'
+        self.write_line(f'SKSETPWD C {key}')
+        assert self.read_line() == 'OK'
 
     def __set_id(self, rb_id: str):
-        self.__write_line_serial(f'SKSETRBID {rb_id}')
-        assert self.__read_line_serial() == 'OK'
+        self.write_line(f'SKSETRBID {rb_id}')
+        assert self.read_line() == 'OK'
 
     def __scan(self) -> Tuple[str, str, str]:
         for duration in range(4, 10):
             self.__logger.debug(f'Start scanning with duration {duration}')
-            self.__write_line_serial(f'SKSCAN 2 FFFFFFFF {duration}')
+            self.write_line(f'SKSCAN 2 FFFFFFFF {duration}')
             scan_res = {}
             while True:
-                line = self.__read_line_serial()
+                line = self.read_line()
                 if line.startswith('EVENT 22'):
                     if 'Channel' not in scan_res or 'Pan ID' not in scan_res or 'Addr' not in scan_res:
                         break
@@ -122,21 +128,21 @@ class SmartMeterConnection:
         raise Exception('Scan Failed')
 
     def __set_reg(self, reg_name: str, value: str) -> None:
-        self.__write_line_serial(f'SKSREG {reg_name} {value}')
-        assert self.__read_line_serial() == 'OK'
+        self.write_line(f'SKSREG {reg_name} {value}')
+        assert self.read_line() == 'OK'
 
     def __get_ip_from_mac(self, addr: str) -> str:
-        self.__write_line_serial(f'SKLL64 {addr}')
-        return self.__read_line_serial()
+        self.write_line(f'SKLL64 {addr}')
+        return self.read_line()
 
     def __connect(self, addr: str) -> None:
-        self.__write_line_serial(f'SKJOIN {addr}')
+        self.write_line(f'SKJOIN {addr}')
         while True:
-            line = self.__read_line_serial()
+            line = self.read_line()
             if line.startswith('EVENT 24'):
                 raise RuntimeError('Failed to connect !')
             elif line.startswith('EVENT 25'):
-                self.__read_line_serial()
+                self.read_line()
                 self.__connection.timeout = 1
                 return
     
@@ -212,7 +218,7 @@ class SmartMeterConnection:
         self.__send_udp_serial(self.__link_local_addr, self.request_bytes)
         self.__logger.debug('ECHONet sent.')
 
-        response = self.__read_line_serial()
+        response = self.read_line()
         self.__logger.debug(f'ECHONet response: {response}')
 
         if response == '':
