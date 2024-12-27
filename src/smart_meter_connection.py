@@ -200,7 +200,7 @@ class SmartMeterConnection:
             epc = echonet.epc_kWh
         elif epc_type == 'kWh_uint':
             epc = echonet.epc_kWh_unit
-        if epc_type == 'watt':
+        elif epc_type == 'watt':
             epc = echonet.epc_watt
         elif epc_type == 'ampare':
             epc = echonet.epc_ampare
