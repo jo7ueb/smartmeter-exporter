@@ -20,7 +20,12 @@ class SmartMeterThread(LineReader):
         self.__logger.debug(f'[SERIAL] <=== {data}')
         
         if self.__is_echonet_established:
-            pass
+            # ERXUDPで始まる電文は、スマートメーターからのパケットなので処理する
+            if data.startswith('ERXUDP'):
+                self.__process_smartmeter_packet(data)
+            else:
+                self.__logger.debug(f'Ignored packet: {data}')
+        # Echonet確立前は同期通信をする
         else:
             self.__received_lines.append(data)
 
@@ -111,19 +116,32 @@ class SmartMeterThread(LineReader):
         self.__write(f'SKJOIN {addr}')
         assert self.__received_lines.pop(0) == 'OK'
 
-        while len(self.__received_lines) == 0:
-            pass
+        while not self.__is_echonet_established:
+            while len(self.__received_lines) == 0:
+                pass
+            
+            line = self.__received_lines.pop(0)
+            if line.startswith('EVENT 24'):
+                raise RuntimeError('Connection failed.')
+            elif line.startswith('EVENT 25'):
+                self.__logger.info('Connection successful.')
+                self.__is_echonet_established = True
+                return
+            else:
+                self.__logger.debug(f'Ignoring response: {line}')
 
-        line = self.__received_lines.pop(0)
-        if line.startswith('EVENT 24'):
-            raise RuntimeError('Connection failed.')
-        elif line.startswith('EVENT 25'):
-            self.__logger.info('Connection successful.')
-            self.__is_echonet_established = True
-            return
-        else:
-            self.__logger.debug(f'Ignoring response: {line}')
- 
+    def __process_smartmeter_packet(self, packet):
+        data = packet.split(' ')
+        udp_packet = {'sender': data[1],
+                      'dest': data[2],
+                      'port_src': int(data[3], 16),
+                      'port_dest': int(data[4], 16),
+                      'sender_macaddr': data[5],
+                      'secured': data[6],
+                      'length': int(data[7], 16),
+                      'data': data[8]}
+        self.__logger.debug(f'udp_packet: {udp_packet}')
+        
     def establish_echonet(self, sm_id, sm_password):
         self.__logger.info('Establish connection to smartmeter Echonet ...')
 
