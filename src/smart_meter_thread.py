@@ -11,6 +11,7 @@ class SmartMeterThread(LineReader):
         self.__logger = logging.getLogger(__name__)
         self.__received_lines = []  # 同期通信用のバッファ
         self.__is_echonet_established = False
+        self.__link_local_addr = None
 
     def connection_made(self, transport):
         super(SmartMeterThread, self).connection_made(transport)
@@ -153,7 +154,14 @@ class SmartMeterThread(LineReader):
         channel, pan_id, addr = self.__scan_smart_meter()
         self.__set_reg('S2', channel)
         self.__set_reg('S3', pan_id)
-        link_local_addr = self.__get_ip_from_mac(addr)
-        self.__connect(link_local_addr)
+        self.__link_local_addr = self.__get_ip_from_mac(addr)
+        self.__connect(self.__link_local_addr)
 
         self.__logger.info('================ CONNECTION ESTABLISHED ================')
+
+    def send_echonet_packet(self, data):
+        self.__logger.debug(f'Sending Echonet packet: {data}')
+        header = f'SKSENDTO 1 {self.__link_local_addr} 0E1A 1 {len(data):04X} '
+        data = header + str(data)
+        self.__write(data)
+        

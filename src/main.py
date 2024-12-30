@@ -4,6 +4,8 @@ from smart_meter_connection import SmartMeterConnection
 from smart_meter_thread import SmartMeterThread
 from serial import Serial
 from serial.threaded import ReaderThread
+import echonet
+
 if __name__ == '__main__':
 
     sm_id = os.environ.get('SMARTMETER_ID', None)
@@ -29,7 +31,7 @@ if __name__ == '__main__':
         
         while True:
             logger.info('Sending request to smartmeter.')
-            protocol.write_line('SKINFO')
+            protocol.send_echonet_packet(echonet.make_elite_request_str())
             time.sleep(sm_interval)
                 
     with SmartMeterConnection(sm_id, sm_key, sm_dev) as conn:

@@ -30,19 +30,7 @@ def parse_elite_response_data(data: str):
     }
     return parse_data
 
-def make_elite_request_str(epc_type: str):
-
-    if epc_type == 'kWh':
-        epc = epc_kWh
-    elif epc_type == 'kWh_unit':
-        epc = epc_kWh_unit
-    elif epc_type == 'watt':
-        epc = epc_watt
-    elif epc_type == 'ampare':
-        epc = epc_ampare
-    else:
-        epc = ""
-
+def make_elite_request_str():
     data = {
         "ehd1": b'\x10',
         "ehd2": b'\x81',
@@ -50,8 +38,14 @@ def make_elite_request_str(epc_type: str):
         "seoj": wisun_module_eoj,
         "deoj": smartmeter_eoj,
         "esv": esv_req_codes['Get'], #読み出し要求
-        "opc": b'\x01',          #処理対象プロパティカウンタ数
-        "epc": epc,
-        "pdc": b'\x00',          #PDC
+        "opc": b'\x04',          #処理対象プロパティカウンタ数
+        "epc1": epc_kWh,
+        "pdc1": b'\x00',   
+        "epc1": epc_kWh_unit,
+        "pdc1": b'\x00',   
+        "epc1": epc_watt,
+        "pdc1": b'\x00',   
+        "epc1": epc_ampare,
+        "pdc1": b'\x00',   
     }
     return b''.join(data.values())
