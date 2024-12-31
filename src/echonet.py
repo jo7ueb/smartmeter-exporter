@@ -41,11 +41,11 @@ def make_elite_request_str():
         "opc": b'\x04',          #処理対象プロパティカウンタ数
         "epc1": epc_kWh,
         "pdc1": b'\x00',   
-        "epc1": epc_kWh_unit,
-        "pdc1": b'\x00',   
-        "epc1": epc_watt,
-        "pdc1": b'\x00',   
-        "epc1": epc_ampare,
-        "pdc1": b'\x00',   
+        "epc2": epc_kWh_unit,
+        "pdc2": b'\x00',   
+        "epc3": epc_watt,
+        "pdc3": b'\x00',   
+        "epc4": epc_ampare,
+        "pdc4": b'\x00',   
     }
     return b''.join(data.values())
