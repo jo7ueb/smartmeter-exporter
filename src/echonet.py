@@ -54,7 +54,17 @@ def process_elite_response_packet(data):
         observations.append(observation)
         byteidx += (2 + pdc)
         logger.debug(f'    data: {observations[i]}')
-        
+
+    # 実際のデータを処理する
+    for observation in ovservations:
+        match observation['epc']:
+            case epc_kWh:
+            case epc_kWh_unit:
+            case epc_watt:
+            case epc_ampere:
+            case _:
+                logger(f'Unrecognized EPC {observation["epc"]}')
+                
 def parse_elite_response_data(data: str):
     parse_data = {
         "ehd1": bytes.fromhex(data[0:0+2]),
