@@ -19,6 +19,8 @@ esv_res_codes = {
 
 logger = logging.getLogger(__name__)
 
+kWh_coeff = None
+
 def process_elite_response_packet(data):
 
     # basic header
@@ -38,7 +40,7 @@ def process_elite_response_packet(data):
     # SEOJ(送信元オブジェクト)がスマートメーターでない場合は無視する
     if packet_header['seoj'] != smartmeter_eoj:
         logger.info(f'Ignoring packet with unrecognized SEOJ {packet_header["seoj"]}')
-        return None, None
+        return None
 
     # データ部を読み取る
     byteidx = 0
@@ -47,7 +49,7 @@ def process_elite_response_packet(data):
         logger.debug(f'[EPC {i}')
         pdc = int.from_bytes(packet_data[byteidx+1:byteidx+2])
         observation = {
-            'epc': packet_data[byteidx],
+            'epc': packet_data[byteidx].to_bytes(),
             'pdc': pdc,
             'edt': packet_data[byteidx+2:byteidx+2+pdc]
         }
@@ -56,14 +58,53 @@ def process_elite_response_packet(data):
         logger.debug(f'    data: {observations[i]}')
 
     # 実際のデータを処理する
-    for observation in ovservations:
-        match observation['epc']:
-            case epc_kWh:
-            case epc_kWh_unit:
-            case epc_watt:
-            case epc_ampere:
-            case _:
-                logger(f'Unrecognized EPC {observation["epc"]}')
+    final_data = {
+        'kWh': None,
+        'watt': None,
+        'ampare_r': None,
+        'ampere_t': None
+    }
+    for observation in observations:
+        epc = observation['epc']
+        if epc == epc_kWh:
+            if kWh_coeff:
+                raw_data = int.from_bytes(observation['edt'], byteorder='big')
+                final_data['kWh']= raw_data *kWh_coeff
+            logger.info(f'積算電力が届きました: {final_data["kWh"]} [kWh]')
+        elif epc == epc_kWh_unit:
+            int_edt = int.from_bytes(observation['edt'])
+            if int_edt == 0:
+                kWh_coeff = 1.0
+            elif int_edt == 1:
+                kWh_coeff = 0.1
+            elif int_edt == 2:
+                kWh_coeff = 0.01
+            elif int_edt == 3:
+                kWh_coeff = 0.001
+            elif int_edt == 4:
+                kWh_coeff = 0.0001
+            elif int_edt == 10:
+                kWh_coeff = 10.0
+            elif int_edt == 11:
+                kWh_coeff = 100.0
+            elif int_edt == 12:
+                kWh_coeff = 1000.0
+            elif int_edt == 13:
+                kWh_coeff = 10000.0
+            else:
+                logger.warn(f'Unrecognized coeff: int_edt')
+            logger.info(f'積算電力の単位が届きました: {kWh_coeff}')
+        elif epc == epc_watt:
+            final_data['watt'] = int.from_bytes(observation['edt'], byteorder='big')
+            logger.info(f'瞬間電力が届きました: {final_data["watt"]} [W]')
+        elif epc == epc_ampare:
+            r_raw = int.from_bytes(observation['edt'][0:2], byteorder='big') * 10  # 0.1A単位
+            t_raw = int.from_bytes(observation['edt'][2:4], byteorder='big') * 10
+            final_data['ampare_r'] = r_raw
+            final_data['ampare_t'] = t_raw
+            logger.info(f'瞬間電流が届きました:  (R相) {r_raw} [A]  (T相) {t_raw}')
+        else:
+            logger.warn(f'Unrecognized EPC {observation["epc"]}')
                 
 def parse_elite_response_data(data: str):
     parse_data = {
@@ -89,9 +130,9 @@ def make_elite_request_str():
         "deoj": smartmeter_eoj,
         "esv": esv_req_codes['Get'], #読み出し要求
         "opc": b'\x04',          #処理対象プロパティカウンタ数
-        "epc1": epc_kWh,
+        "epc1": epc_kWh_unit,
         "pdc1": b'\x00',   
-        "epc2": epc_kWh_unit,
+        "epc2": epc_kWh,
         "pdc2": b'\x00',   
         "epc3": epc_watt,
         "pdc3": b'\x00',   

@@ -150,8 +150,11 @@ class SmartMeterThread(LineReader):
                       'data': str(data[8])}
         self.__logger.debug(f'udp_packet: {udp_packet}')
         self.__logger.debug((type(data[8])))
-        echonet.process_elite_response_packet(data[8])
-        
+        value_type, value = echonet.process_elite_response_packet(data[8])
+
+        if value_type:
+            send_prometheus(value_type, value)
+            
     def establish_echonet(self, sm_id, sm_password):
         self.__logger.info('Establish connection to smartmeter Echonet ...')
 
