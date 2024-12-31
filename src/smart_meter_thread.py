@@ -2,6 +2,7 @@ import logging,time
 from typing import Optional, Tuple
 from serial import Serial
 from serial.threaded import LineReader
+from smart_meter_prometheus import SmartMeterPrometheusServer
 import traceback
 import echonet as echonet
 
@@ -12,7 +13,8 @@ class SmartMeterThread(LineReader):
         self.__received_lines = []  # 同期通信用のバッファ
         self.__is_echonet_established = False
         self.__link_local_addr = None
-
+        self.__prometheus = SmartMeterPrometheusServer()
+        
     def connection_made(self, transport):
         super(SmartMeterThread, self).connection_made(transport)
         self.__logger.info("SmartMeterThread ready")
@@ -153,7 +155,7 @@ class SmartMeterThread(LineReader):
         value = echonet.process_elite_response_packet(data[8])
 
         if value:
-            pass
+            self.__prometheus.set_avlue(value)
             
     def establish_echonet(self, sm_id, sm_password):
         self.__logger.info('Establish connection to smartmeter Echonet ...')

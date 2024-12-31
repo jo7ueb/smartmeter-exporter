@@ -98,8 +98,8 @@ def process_elite_response_packet(data):
             final_data['watt'] = int.from_bytes(observation['edt'], byteorder='big')
             logger.info(f'瞬間電力が届きました: {final_data["watt"]} [W]')
         elif epc == epc_ampare:
-            r_raw = int.from_bytes(observation['edt'][0:2], byteorder='big') * 10  # 0.1A単位
-            t_raw = int.from_bytes(observation['edt'][2:4], byteorder='big') * 10
+            r_raw = int.from_bytes(observation['edt'][0:2], byteorder='big') / 10  # 0.1A単位
+            t_raw = int.from_bytes(observation['edt'][2:4], byteorder='big') / 10
             final_data['ampare_r'] = r_raw
             final_data['ampare_t'] = t_raw
             logger.info(f'瞬間電流が届きました:  (R相) {r_raw} [A]  (T相) {t_raw}')
