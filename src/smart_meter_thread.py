@@ -32,6 +32,7 @@ class SmartMeterThread(LineReader):
 
     def connection_lost(self, exc):
         if exc:
+            self.__logger.error(exc)
             traceback.print_exc(exc)
         self.__logger.error("Something happened.")
 
@@ -137,6 +138,7 @@ class SmartMeterThread(LineReader):
                 self.__logger.debug(f'Ignoring response: {line}')
 
     def __process_smartmeter_packet(self, packet):
+        self.__logger.debug((type(packet)))
         data = packet.split(' ')
         udp_packet = {'sender': data[1],
                       'dest': data[2],
@@ -145,8 +147,10 @@ class SmartMeterThread(LineReader):
                       'sender_macaddr': data[5],
                       'secured': data[6],
                       'length': int(data[7], 16),
-                      'data': data[8]}
+                      'data': str(data[8])}
         self.__logger.debug(f'udp_packet: {udp_packet}')
+        self.__logger.debug((type(data[8])))
+        echonet.process_elite_response_packet(data[8])
         
     def establish_echonet(self, sm_id, sm_password):
         self.__logger.info('Establish connection to smartmeter Echonet ...')

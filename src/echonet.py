@@ -1,3 +1,5 @@
+import logging
+
 # 第3章 電文構成(フレームフォーマット) 3.2 電文構成 を参照
 
 smartmeter_eoj = b'\x02\x88\x01' #住宅設備関連機器(低圧スマート電力量メータクラス)
@@ -15,6 +17,38 @@ esv_res_codes = {
     "Get_Res": b'r', #b'\x72' (pythonの仕様上、bytes.fromhexすると文字変換されてしまう)
 }
 
+logger = logging.getLogger(__name__)
+
+def process_elite_response_packet(data):
+
+    # basic header
+    packet_header = {
+        'ehd1': bytes.fromhex(data[0:2]),
+        'ehd2': bytes.fromhex(data[2:4]),
+        'tid': bytes.fromhex(data[4:8]),
+        'seoj': bytes.fromhex(data[8:14]),
+        'deoj': bytes.fromhex(data[16:20]),
+        'esv': bytes.fromhex(data[20:22]),
+        'opc': int(data[22:24], 16),
+    }
+    packet_data = bytes.fromhex(data[24:])
+    logger.debug(packet_header)
+    logger.debug(f'Processing {packet_header["opc"]} objects...')
+
+    byteidx = 0
+    observations = []
+    for i in range (packet_header['opc']):
+        logger.debug(f'[EPC {i}')
+        pdc = int.from_bytes(packet_data[byteidx+1:byteidx+2])
+        observation = {
+            'epc': packet_data[byteidx],
+            'pdc': pdc,
+            'edt': packet_data[byteidx+2:byteidx+2+pdc]
+        }
+        observations.append(observation)
+        byteidx += (2 + pdc)
+        logger.debug(f'    data: {observations[i]}')
+        
 def parse_elite_response_data(data: str):
     parse_data = {
         "ehd1": bytes.fromhex(data[0:0+2]),
