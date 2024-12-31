@@ -35,6 +35,12 @@ def process_elite_response_packet(data):
     logger.debug(packet_header)
     logger.debug(f'Processing {packet_header["opc"]} objects...')
 
+    # SEOJ(送信元オブジェクト)がスマートメーターでない場合は無視する
+    if packet_header['seoj'] != smartmeter_eoj:
+        logger.info(f'Ignoring packet with unrecognized SEOJ {packet_header["seoj"]}')
+        return None, None
+
+    # データ部を読み取る
     byteidx = 0
     observations = []
     for i in range (packet_header['opc']):
