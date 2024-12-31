@@ -40,7 +40,12 @@ class SmartMeterThread(LineReader):
         self.__logger.debug(f'[SERIAL] ===> {line}')
         self.write_line(line)
         time.sleep(0.1)
-        
+
+    def __write_raw(self, data):
+        self.__logger.debug(f'[SERIAL] ===> {data}')
+        self.transport.write(data)
+        time.sleep(0.1)
+    
     # コネクションを張る処理に使う関数群
     def __check_version(self):
         self.__write('SKVER')
@@ -160,8 +165,8 @@ class SmartMeterThread(LineReader):
         self.__logger.info('================ CONNECTION ESTABLISHED ================')
 
     def send_echonet_packet(self, data):
-        self.__logger.debug(f'Sending Echonet packet: {data}')
-        header = f'SKSENDTO 1 {self.__link_local_addr} 0E1A 1 {len(data):04X} '
-        data = header + str(data)
-        self.__write(data)
+        self.__logger.debug(f'Sending Echonet packet: {data}  length: {len(data)}')
+        header = f'SKSENDTO 1 {self.__link_local_addr} 0E1A 1 {len(data):04X} '.encode('ascii')
+        data = header + data
+        self.__write_raw(data)
         
