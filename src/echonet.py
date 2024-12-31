@@ -105,7 +105,8 @@ def process_elite_response_packet(data):
             logger.info(f'瞬間電流が届きました:  (R相) {r_raw} [A]  (T相) {t_raw}')
         else:
             logger.warn(f'Unrecognized EPC {observation["epc"]}')
-                
+
+    return final_data
 def parse_elite_response_data(data: str):
     parse_data = {
         "ehd1": bytes.fromhex(data[0:0+2]),
