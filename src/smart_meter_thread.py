@@ -155,7 +155,7 @@ class SmartMeterThread(LineReader):
         value = echonet.process_elite_response_packet(data[8])
 
         if value:
-            self.__prometheus.set_avlue(value)
+            self.__prometheus.set_value(value)
             
     def establish_echonet(self, sm_id, sm_password):
         self.__logger.info('Establish connection to smartmeter Echonet ...')
